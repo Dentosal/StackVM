@@ -19,6 +19,10 @@ Devices add "extra" functionality, such as stdio, file system, networking, and s
 
 They are versioned separately from the core. A program can require specific version of a device.
 
+## Dependencies
+
+Python 3.6 or newer.
+
 
 ## Running programs
 
