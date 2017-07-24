@@ -9,7 +9,7 @@ p:
     push ?hw print_unicode
     exit
 
-factorial: # (a) -> (a!)
+factorial: # a -> (a!)
     .init:
         dup
     .body:
