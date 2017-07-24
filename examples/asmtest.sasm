@@ -1,0 +1,27 @@
+start:
+    push 50
+    push :factorial call
+    print
+
+p:
+
+    push ?hw push @hw load_const
+    push ?hw print_unicode
+    exit
+
+factorial: # (a) -> (a!)
+    .init:
+        dup
+    .body:
+        dup push 2 lt push :.over jnz
+
+        push 1 sub
+        dup rot mul
+        swap
+        push :.body jmp
+
+    .over:
+        drop
+        return
+
+hw = "Hello World! ¡Unicödé!\n"
