@@ -1,0 +1,66 @@
+fizz = "fizz"
+buzz = "buzz"
+
+start:
+    push 0
+
+.loop:
+    # increment counter
+    push 1 add
+
+    # print-number flag
+    push 0 swap
+
+    # mod 3
+    dup push 3 push :divisible call not push :.over3 jnz
+
+    push ?fizz push @fizz load_const
+    push ?fizz print_unicode
+
+    swap drop push 1 swap
+
+.over3:
+
+    # mod 5
+    dup push 5 push :divisible call not push :.over5 jnz
+
+    push ?buzz push @buzz load_const
+    push ?buzz print_unicode
+
+    swap drop push 1 swap
+
+.over5:
+
+    swap not push :.print_int jnz
+
+    # linebreak
+    push 10 push 1 print_unicode
+    push :.next jmp
+
+.print_int:
+    dup print
+
+.next:
+    dup push 100 lt push :.loop jnz
+
+    exit
+
+
+divisible: # m n -> (m % n == 0)
+.loop:
+    over over lt    # m n -> m n (m < n)
+        push :.false jnz
+
+    dup rot rot     # m n -> n m n
+    sub swap        # n m n -> (m - n) n
+
+    over push :.loop jnz  # break if (m - n == 0)
+
+    drop drop
+    push 1
+    return
+
+.false:
+    drop drop
+    push 0
+    return
