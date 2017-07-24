@@ -43,6 +43,7 @@ class Operations(object):
         self._simple_stack_op("dup")
         self._simple_stack_op("swap")
         self._simple_stack_op("rot")
+        self._simple_stack_op("over")
 
     @staticmethod
     def op_exit(state):

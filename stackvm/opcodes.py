@@ -17,6 +17,7 @@ OPCODES = {
     0x31: OPS.op_dup,
     0x32: OPS.op_swap,
     0x33: OPS.op_rot,
+    0x34: OPS.op_over,
 
     0x40: OPS.op_add,
     0x41: OPS.op_sub,
