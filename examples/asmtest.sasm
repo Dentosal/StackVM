@@ -5,8 +5,8 @@ start:
 
 p:
 
-    push ?hw push @hw load_const
-    push ?hw print_unicode
+    push ?hw push @hw load_string
+    push $hw dbgprint
     exit
 
 factorial: # a -> (a!)

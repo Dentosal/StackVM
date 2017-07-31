@@ -14,8 +14,8 @@ start:
     # mod 3
     dup push 3 push :divisible call not push :.over3 jnz
 
-    push ?fizz push @fizz load_const
-    push ?fizz print_unicode
+    push ?fizz push @fizz load_string
+    push $fizz dbgprint
 
     swap drop push 1 swap
 
@@ -24,8 +24,8 @@ start:
     # mod 5
     dup push 5 push :divisible call not push :.over5 jnz
 
-    push ?buzz push @buzz load_const
-    push ?buzz print_unicode
+    push ?buzz push @buzz load_string
+    push $buzz dbgprint
 
     swap drop push 1 swap
 
@@ -34,7 +34,7 @@ start:
     swap not push :.print_int jnz
 
     # linebreak
-    push 10 push 1 print_unicode
+    push 10 push 1 dbgprint
     push :.next jmp
 
 .print_int:
