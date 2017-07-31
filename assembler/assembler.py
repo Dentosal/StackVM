@@ -4,13 +4,21 @@ import json
 
 from . import scanner
 
-from stackvm.byteint import *
+from stackvm.byteutil import *
 from stackvm.opcodes import OPCODES
 
 OP_NAMES = {v.__name__[3:]: k for k,v in OPCODES.items()}
 
-def count_bytes(it):
-    return sum([1 if isinstance(c, int) else c.size_bytes for c in it])
+def count_bytes_codelike(items):
+    def size(item):
+        if isinstance(item, int):
+            return 1
+        elif isinstance(item, str):
+            return len(item)
+        else:
+            return item.size_bytes
+
+    return sum(map(size, items))
 
 class LabelReference(object):
     def __init__(self, name):
@@ -19,15 +27,6 @@ class LabelReference(object):
     @property
     def size_bytes(self):
         return 8
-
-class UnprocessedFunction(object):
-    def __init__(self, name, tokens):
-        self.name = name
-        self.tokens = tokens
-
-    @property
-    def size_bytes(self):
-        return count_bytes(t.size_bytes for t in self.tokens)
 
 class PostponedAddress(object):
     def __init__(self, name):
@@ -63,57 +62,24 @@ class Assembler(object):
         return tokens
 
     def process_constants(self, tokens):
-        token_buffer = []
-        function_buffer = []
-
-        for token in tokens:
-            if function_buffer:
-                if token.category in "function_end":
-                    token_buffer.append(function_buffer[1:])
-                    function_buffer = []
-                elif token.category in "function_start":
-                    exit("Syntax Error: Function blocks cannot be nested")
-                elif token.category in "constant_assign":
-                    exit("Syntax Error: Functions cannot contain constants")
-                elif token.category in "label":
-                    exit("Syntax Error: Functions cannot contain labels")
-                else:
-                    function_buffer.append(token)
-            else:
-                if token.category in "function_end":
-                    exit("Syntax Error: Function must start before it can end")
-                elif token.category in "function_start":
-                    function_buffer.append(token)
-                else:
-                    token_buffer.append(token)
-
-        if function_buffer:
-            exit("Unterminated function")
+        tokens = tokens[:]
 
         code_tokens = []
-        while token_buffer:
-            if len(token_buffer) >= 2 and token_buffer[1].category == "constant_assign":
-                if len(token_buffer) < 3:
+        while tokens:
+            if len(tokens) >= 2 and tokens[1].category == "constant_assign":
+                if len(tokens) < 3:
                     exit("Syntax Error: Code must not end with assignment operator (=)")
 
-                name, _, value = token_buffer[:3]
-                token_buffer = token_buffer[3:]
+                name, _, value = tokens[:3]
+                tokens = tokens[3:]
 
-                if isinstance(value, list): # function
-                    self.data_constants[name.text] = UnprocessedFunction(name.text, value)
-                elif value.category == "string":
-                    self.data_constants[name.text] = list(bytes(json.loads(value.text), "utf-8"))
+                if value.category == "string":
+                    self.data_constants[name.text] = json.loads(value.text).encode("utf-8")
                 else:
                     exit(f"Error: Unknown constant {value}")
-
                 continue
 
-            code_tokens.append(token_buffer.pop(0))
-
-        for name, value in self.data_constants.copy().items():
-            if isinstance(value, UnprocessedFunction):
-                val = [b for t in value.tokens for b in self.token_to_code(t)]
-                self.data_constants[name] = val
+            code_tokens.append(tokens.pop(0))
 
         return code_tokens
 
@@ -127,23 +93,24 @@ class Assembler(object):
             else:
                 exit(f"Error: Unknown token {token}")
 
+        elif token.category == "string_len":
+            if token.text[1:] in self.data_constants:
+                c = self.data_constants[token.text[1:]]
+                return list(bytes_from_int(len(str_to_u32unicode(c.decode("utf-8"))), pad_to=8))
+            else:
+                exit(f"Error: Unknown constant: {token.text[1:]}")
+
         elif token.category == "size":
             if token.text[1:] in self.data_constants:
                 c = self.data_constants[token.text[1:]]
-                if isinstance(c, UnprocessedFunction):
-                    return list(bytes_from_int(c.size_bytes, pad_to=8))
-                else:
-                    return list(bytes_from_int(count_bytes(c), pad_to=8))
+                return list(bytes_from_int(count_bytes_codelike(c), pad_to=8))
             else:
                 exit(f"Error: Unknown constant: {token.text[1:]}")
 
         elif token.category == "address":
             if token.text[1:] in self.data_constants:
                 c = self.data_constants[token.text[1:]]
-                if isinstance(c, UnprocessedFunction):
-                    return [PostponedAddress(c.name)]
-                else:
-                    return [PostponedAddress(token.text[1:])]
+                return [PostponedAddress(token.text[1:])]
             else:
                 exit(f"Error: Unknown constant: {token.text[1:]}")
 
@@ -193,7 +160,7 @@ class Assembler(object):
             data += data_value
 
         for token in tokens:
-            code += self.token_to_code(token, count_bytes(code))
+            code += self.token_to_code(token, count_bytes_codelike(code))
 
         # resolve label references
         for i, item in reversed(list(enumerate(code))):

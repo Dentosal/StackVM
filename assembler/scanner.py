@@ -8,7 +8,7 @@ class Token(object):
     @property
     def size_bytes(self):
         if self.category == "string":
-            return len(bytes(json.loads(value.text), "utf-8"))
+            return len(str_to_u32unicode_bytes(json.loads(value.text)))
         elif self.category in ("integer", "label", "address", "size", "label_ref"):
             return 8
         elif self.category == "token":
@@ -29,6 +29,7 @@ def scan_forward(text):
         (r"\".*?[^\\]\"", "string"),
         (r"\d+", "integer"),
         (r"\%[a-zA-Z_][a-zA-Z0-9_]*", "command"),
+        (r"\$[a-zA-Z_][a-zA-Z0-9_]*", "string_len"),
         (r"\?[a-zA-Z_][a-zA-Z0-9_]*", "size"),
         (r"\@[a-zA-Z_][a-zA-Z0-9_]*", "address"),
         (r"\:[a-zA-Z_][a-zA-Z0-9_.]*", "label_ref"),
@@ -36,9 +37,7 @@ def scan_forward(text):
         (r"[a-zA-Z_][a-zA-Z0-9_]*:", "label"),
         (r"\.[a-zA-Z_][a-zA-Z0-9_]*:", "dotlabel"),
         (r"[a-zA-Z_][a-zA-Z0-9_]*", "token"),
-        (r"=", "constant_assign"),
-        (r"\{", "function_start"),
-        (r"\}", "function_end"),
+        (r"=", "constant_assign")
     ]:
         m = re.match(regex, text)
         if m:
