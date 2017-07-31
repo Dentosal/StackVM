@@ -1,5 +1,5 @@
 import operator
-from .byteint import *
+from .byteutil import *
 
 
 class Operations(object):
@@ -57,13 +57,54 @@ class Operations(object):
         state.data_stack.push(value)
 
     @staticmethod
-    def op_load_const(state):
-        """Loads N bytes from image, extends them to u64 and pushes to data stack."""
+    def op_load_bytes(state):
+        """Loads N bytes from image, extends them to u64 and pushes to data stack, first value on top."""
         addr = state.data_stack.pop()
         count = state.data_stack.pop()
-        for i in range(addr, addr+count):
+        for i in reversed(range(addr, addr+count)):
             value = state.image.get_at(i)
             state.data_stack.push(value)
+
+    @staticmethod
+    def op_load_string(state):
+        """Loads N bytes from image, extends them to u32 unicode scalar values and pushes to stack."""
+        addr = state.data_stack.pop()
+        count = state.data_stack.pop()
+        data = bytes(map(state.image.get_at, range(addr, addr+count)))
+        for v in reversed(str_to_u32unicode(data.decode("utf-8"))):
+            state.data_stack.push(int_from_bytes(v))
+
+    @staticmethod
+    def op_heap_alloc(state):
+        size = state.data_stack.pop()
+        ptr = state.heap.allocate(size)
+        state.data_stack.push(ptr)
+
+    @staticmethod
+    def op_heap_resize(state):
+        size = state.data_stack.pop()
+        ptr = state.data_stack.pop()
+        newptr = state.heap.resize(size)
+        state.data_stack.push(newptr)
+
+    @staticmethod
+    def op_heap_free(state):
+        ptr = state.data_stack.pop()
+        state.heap.free(size)
+
+    @staticmethod
+    def op_heap_get_bytes(state):
+        size = state.data_stack.pop()
+        ptr = state.data_stack.pop()
+        for value in reversed(state.heap.get_region_at(ptr, size)):
+            state.data_stack.push(value)
+
+    @staticmethod
+    def op_heap_set_bytes(state):
+        size = state.data_stack.pop()
+        ptr = state.data_stack.pop()
+        values = [state.data_stack.pop() for _ in range(size)]
+        state.heap.set_region_at(ptr, values)
 
     @staticmethod
     def op_jmp(state):
@@ -85,15 +126,52 @@ class Operations(object):
         state.ip = state.return_stack.pop()
 
     @staticmethod
+    def op_to_rs(state):
+        """Moves a value from the data stack to the return stack."""
+        state.return_stack.push(state.data_stack.pop())
+
+    @staticmethod
+    def op_from_rs(state):
+        """Moves a value from the return stack to the data stack."""
+        state.data_stack.push(state.return_stack.pop())
+
+    @staticmethod
+    def op_fetch_rs(state):
+        """Copies a value from return the stack to the data stack."""
+        state.data_stack.push(state.return_stack.pop())
+
+    @staticmethod
+    def op_dupn(state):
+        """Copies a value from return the stack to the data stack."""
+        state.data_stack.dupn(state.data_stack.pop())
+
+    @staticmethod
+    def op_ucharsz(state):
+        """Stack containing unicode string in"""
+        print(state.data_stack.pop())
+
+    @staticmethod
     def op_print(state):
         print(state.data_stack.pop())
 
     @staticmethod
-    def op_print_unicode(state):
+    def op_dbgprint(state):
         data = []
         count = state.data_stack.pop()
 
         for _ in range(count):
-            data.append(state.data_stack.pop())
+            data.append(bytes_from_int(state.data_stack.pop(), pad_to=8))
 
-        print(bytes(data[::-1]).decode("utf-8"), end="")
+        print(u32unicode_to_str(data), end="")
+
+    @staticmethod
+    def op_dev_read(state):
+        devcode = state.data_stack.pop()
+        dev = state.get_device(devcode)
+        dev.read(state.data_stack.push)
+
+    @staticmethod
+    def op_dev_write(state):
+        devcode = state.data_stack.pop()
+        dev = state.get_device(devcode)
+        dev.write(state.data_stack.pop)

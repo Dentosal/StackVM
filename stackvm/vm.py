@@ -1,8 +1,9 @@
+from .byteutil import *
 from .image import Image
 from .stack import Stack
 from .heap import Heap
 from .opcodes import OPCODES
-from .byteint import *
+from .devcodes import DEVCODES
 
 class MachineState(object):
     def __init__(self, image, **kwargs):
@@ -13,11 +14,7 @@ class MachineState(object):
         self.data_stack     = Stack(lambda v: 0 <= v < 2**64)
         self.return_stack   = Stack(lambda v: 0 <= v < 2**64)
         self.ip = self.image.start_address
-
-    def pop_next_instruction(self):
-        value = self.image.get_at(self.ip, require_executable=True)
-        self.ip += 1
-        return value
+        self.__devices = {}
 
     @property
     def ip_current(self):
@@ -26,6 +23,17 @@ class MachineState(object):
     @property
     def ip_next(self):
         return self.ip
+
+    def pop_next_instruction(self):
+        value = self.image.get_at(self.ip, require_executable=True)
+        self.ip += 1
+        return value
+
+    def get_device(self, devcode):
+        if devcode not in self.__devices:
+            # TODO: permission check
+            self.__devices[devcode] = DEVCODES[devcode]()
+        return self.__devices[devcode]
 
     def step(self):
         value = self.pop_next_instruction()

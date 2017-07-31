@@ -44,6 +44,11 @@ class Stack(object):
     def dup(self):
         self.pick(0)
 
+    def dupn(self, n):
+        assert n >= 1
+        for _ in range(n):
+            self.pick(n - 1)
+
     def over(self):
         self.pick(1)
 

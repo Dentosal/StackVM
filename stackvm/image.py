@@ -1,4 +1,4 @@
-from .byteint import *
+from .byteutil import *
 
 class Image(object):
     MAGIC   = 0xC0DE3333
