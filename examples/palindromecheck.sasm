@@ -1,0 +1,34 @@
+start:
+    push :readline call
+
+    dup not push :.over jnz
+
+    # use return stack to store values
+    dup push 1 add dupn
+.copy_loop:
+    swap to_rs
+    push 1 sub
+    dup push 0 eq not
+        push :.copy_loop jnz
+    drop
+
+    # compare
+.compare_loop:
+    swap from_rs eq not push :.not_p jnz
+
+    push 1 sub
+    dup push 0 eq not
+        push :.compare_loop jnz
+    drop
+
+.over:
+    push 1 print
+    exit
+
+.not_p:
+    push 0 print
+    exit
+
+readline:
+    push 3 dev_read
+    return
